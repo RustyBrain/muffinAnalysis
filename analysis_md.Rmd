@@ -1,0 +1,110 @@
+---
+title: "Muffin Results - UCL Proj"
+author: "Russell Plunkett"
+date: "27 January 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(car)
+library(ggplot2)
+library(googledrive)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Muffin Results
+
+Code for analysing the muffin results captured by team super amazing (but slightly overworked). 
+
+```{r res_create, echo=FALSE, cache=TRUE, cache.path="toto_cache/"}
+
+
+drive_download("Muffin results", type = "csv", overwrite = TRUE)
+results <- read.csv("Muffin results.csv")
+
+
+results$Operator.f <- factor(results$Operator)
+results$Sugar.f <- factor(results$Sugar)
+results$Recipe.f <- factor(results$Recipe)
+```
+
+## Summary Stats
+
+Some plots to see the difference in the blocks/factors
+
+```{r, echo=FALSE, dependson="res_create", cache.path="toto_cache/"}
+qplot(results$Operator.f, results$Height, color = factor(results$Sugar))
+qplot(results$Sugar.f, results$Height, color = factor(results$Recipe))
+qplot(results$Recipe.f, results$Height, color = factor(results$Sugar))
+```
+
+
+## Variance within factors
+
+Checking for normality within factors and blocks
+
+```{r echo=FALSE, dependson="res_create", cache.path="toto_cache/"}
+qqPlot(results$Height)
+
+
+op1 <-subset(results, Operator == 1)
+qqPlot(op1$Height)
+op2 <-subset(results, Operator == 2)
+qqPlot(op2$Height)
+op3 <-subset(results, Operator == 3)
+qqPlot(op3$Height)
+
+
+su1 <-subset(results, Sugar == 1)
+qqPlot(su1$Height)
+su2 <-subset(results, Sugar == 2)
+qqPlot(su2$Height)
+# ^ might violate normality assumption
+
+re1 <-subset(results, Recipe == 1)
+qqPlot(re1$Height)
+re2 <-subset(results, Recipe == 2)
+qqPlot(re2$Height)
+re3 <-subset(results, Recipe == 3)
+qqPlot(re3$Height)
+```
+
+There may be one violation of normality in regards to Sugar 2
+
+## Model
+
+Creating the model, and running ANOVA and Summary Stats
+
+```{r model_create, cache=TRUE, dependson="res_create", cache.path="toto_cache/"}
+model = lm(results$Height ~ results$Operator.f + results$Sugar.f + results$Recipe.f + results$Operator.f:results$Sugar.f
+           + results$Operator.f:results$Recipe.f + results$Sugar.f:results$Recipe.f + results$Operator.f:results$Recipe.f:results$Sugar.f)
+Anova(model)
+summary(model)
+```
+
+And some plots on the model to investigate normality of residuals:
+
+```{r dependson="model_create", cache.path="toto_cache/"}
+plot(density(resid(model)))
+plot(model)
+```
+
+## Post-Hocs
+
+Tukey's HSD were carried out to investigate the significant relationships within factors, between factors, and within interactions.
+
+```{r dependson="res_create", cache.path="toto_cache/"}
+TukeyHSD(aov(results$Height ~ results$Operator.f + results$Sugar.f + results$Recipe.f + results$Operator.f:results$Sugar.f
+             + results$Operator.f:results$Recipe.f + results$Sugar.f:results$Recipe.f + results$Operator.f:results$Recipe.f:results$Sugar.f))
+
+```
+
+
+
+
+
+
+
+
+
+
